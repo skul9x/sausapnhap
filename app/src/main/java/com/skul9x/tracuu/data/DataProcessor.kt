@@ -1,7 +1,6 @@
 package com.skul9x.tracuu.data
 
 import android.content.Context
-import com.skul9x.tracuu.utils.DebugLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
@@ -35,12 +34,9 @@ object DataProcessor {
     private var cachedData: List<WardData>? = null
 
     suspend fun loadAndSearch(context: Context, query: String): List<GroupedResult> = withContext(Dispatchers.IO) {
-        DebugLogger.log("DataProcessor", "Bắt đầu tìm kiếm: '$query'")
-        
         val rawData = getOrLoadData(context)
         
         if (rawData.isEmpty()) {
-            DebugLogger.error("DataProcessor", "Dữ liệu raw trống! Không thể tìm kiếm.")
             return@withContext emptyList()
         }
 
@@ -53,10 +49,7 @@ object DataProcessor {
             }
         }
         
-        DebugLogger.log("DataProcessor", "Kết quả tìm thô: ${filtered.size} dòng")
         val grouped = groupResults(filtered)
-        DebugLogger.log("DataProcessor", "Kết quả sau khi gộp: ${grouped.size} nhóm")
-        
         grouped
     }
 
@@ -64,7 +57,6 @@ object DataProcessor {
         if (cachedData != null) {
             return cachedData!!
         }
-        DebugLogger.log("DataProcessor", "Dữ liệu chưa load, bắt đầu đọc file assets...")
         cachedData = loadRawData(context)
         return cachedData!!
     }
@@ -73,10 +65,8 @@ object DataProcessor {
         val dataList = mutableListOf<WardData>()
         try {
             val listFiles = context.assets.list("")
-            DebugLogger.log("DataProcessor", "Files trong assets root: ${listFiles?.joinToString(", ")}")
             
             if (listFiles?.contains(DATA_FILE_NAME) != true) {
-                DebugLogger.error("DataProcessor", "CRITICAL: Không tìm thấy file '$DATA_FILE_NAME' trong thư mục assets!")
                 return emptyList()
             }
 
@@ -107,15 +97,12 @@ object DataProcessor {
                     currentBlock.add(content)
                 }
             }
-            // Process last block
             if (currentBlock.isNotEmpty()) {
                 processBlock(currentBlock)?.let { dataList.add(it) }
             }
             reader.close()
-            DebugLogger.log("DataProcessor", "Đọc xong file. Tổng số dòng: $lineCount. Parse thành công: ${dataList.size} bản ghi.")
             
         } catch (e: Exception) {
-            DebugLogger.error("DataProcessor", "Lỗi khi đọc file data", e)
             e.printStackTrace()
         }
         return dataList
@@ -133,9 +120,6 @@ object DataProcessor {
                 oldDistrict = block[4],
                 oldProvince = block[5]
             )
-        } else {
-            // Log warning for malformed blocks if needed, but keep it quiet for now to avoid spam
-            // DebugLogger.log("DataProcessor", "Block lỗi format: size=${block.size} content=$block")
         }
         return null
     }

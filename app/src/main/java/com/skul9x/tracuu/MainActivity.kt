@@ -1,8 +1,5 @@
 package com.skul9x.tracuu
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -19,7 +16,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,17 +25,16 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.skul9x.tracuu.data.DataProcessor
 import com.skul9x.tracuu.data.GroupedResult
 import com.skul9x.tracuu.data.OldUnitInfo
 import com.skul9x.tracuu.ui.theme.*
-import com.skul9x.tracuu.utils.DebugLogger
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -65,7 +60,6 @@ fun MainScreen() {
     var searchQuery by remember { mutableStateOf("") }
     var results by remember { mutableStateOf(emptyList<GroupedResult>()) }
     var isLoading by remember { mutableStateOf(false) }
-    var showDebugDialog by remember { mutableStateOf(false) }
     
     var searchJob by remember { mutableStateOf<Job?>(null) }
     val context = LocalContext.current
@@ -73,10 +67,8 @@ fun MainScreen() {
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        DebugLogger.log("MainActivity", "App started. Loading initial data...")
-        // Kiểm tra xem file có tồn tại không bằng cách load thử
         val initialData = DataProcessor.loadAndSearch(context, "")
-        if (initialData.isEmpty() && DebugLogger.logs.any { it.contains("CRITICAL") }) {
+        if (initialData.isEmpty()) {
              Toast.makeText(context, "CẢNH BÁO: Thiếu file dữ liệu!", Toast.LENGTH_LONG).show()
         }
     }
@@ -102,13 +94,12 @@ fun MainScreen() {
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { /* menu or empty */ }, enabled = false) { }
+                IconButton(onClick = { }, enabled = false) { }
                 Text(
                     text = "Tra Cứu Sáp Nhập 2025",
                     style = MaterialTheme.typography.headlineSmall.copy(
@@ -117,13 +108,7 @@ fun MainScreen() {
                     ),
                     textAlign = TextAlign.Center
                 )
-                IconButton(onClick = { showDebugDialog = true }) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = "Debug Logs",
-                        tint = PrimaryBlue
-                    )
-                }
+                Spacer(modifier = Modifier.size(48.dp))
             }
             
             Text(
@@ -133,7 +118,6 @@ fun MainScreen() {
                 modifier = Modifier.padding(bottom = 24.dp)
             )
 
-            // Search Box
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -193,7 +177,6 @@ fun MainScreen() {
                 }
             }
 
-            // Status Label
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
                 val statusText = when {
                     searchQuery.isEmpty() -> "Sẵn sàng tra cứu"
@@ -212,20 +195,25 @@ fun MainScreen() {
                 )
             }
 
-            // Results List
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(bottom = 16.dp)
             ) {
                 items(results) { item ->
                     ResultCard(item)
                 }
             }
-        }
-
-        if (showDebugDialog) {
-            DebugDialog(onDismiss = { showDebugDialog = false })
+            
+            Text(
+                text = "© Nguyễn Duy Trường",
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontStyle = FontStyle.Italic,
+                    color = TextSecondary
+                ),
+                modifier = Modifier.padding(top = 8.dp),
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
@@ -242,13 +230,12 @@ fun ResultCard(item: GroupedResult) {
     ) {
         Row(
             modifier = Modifier
-                .height(IntrinsicSize.Min) // Equal height columns
+                .height(IntrinsicSize.Min)
         ) {
-            // New Unit Column
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .background(Color(0xFFF0F9FF)) // Light blue tint
+                    .background(Color(0xFFF0F9FF))
                     .padding(16.dp),
                 verticalArrangement = Arrangement.Center
             ) {
@@ -271,7 +258,6 @@ fun ResultCard(item: GroupedResult) {
                 )
             }
 
-            // Divider
             Box(
                 modifier = Modifier
                     .width(1.dp)
@@ -279,7 +265,6 @@ fun ResultCard(item: GroupedResult) {
                     .background(BorderColor)
             )
 
-            // Old Unit Column
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -340,7 +325,6 @@ fun MapLink(unit: OldUnitInfo) {
                     val intent = Intent(Intent.ACTION_VIEW, uri)
                     context.startActivity(intent)
                 } catch (e: Exception) {
-                    DebugLogger.error("UI", "Không mở được bản đồ", e)
                     Toast.makeText(context, "Không tìm thấy ứng dụng bản đồ", Toast.LENGTH_SHORT).show()
                 }
             },
@@ -361,84 +345,5 @@ fun MapLink(unit: OldUnitInfo) {
             maxLines = 2,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
         )
-    }
-}
-
-@Composable
-fun DebugDialog(onDismiss: () -> Unit) {
-    val context = LocalContext.current
-    val logs = DebugLogger.logs
-
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(600.dp)
-                .padding(8.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Debug Console",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                    )
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
-                    }
-                }
-                
-                Divider(modifier = Modifier.padding(vertical = 8.dp))
-                
-                LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .background(Color(0xFF1E1E1E), RoundedCornerShape(8.dp))
-                        .padding(8.dp)
-                ) {
-                    items(logs) { log ->
-                        Text(
-                            text = log,
-                            color = if (log.contains("ERROR") || log.contains("CRITICAL")) Color(0xFFFF6B6B) else Color(0xFF4ECDC4),
-                            fontSize = 12.sp,
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                            modifier = Modifier.padding(vertical = 2.dp)
-                        )
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Button(
-                        onClick = { DebugLogger.clear() },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Clear")
-                    }
-                    
-                    Button(
-                        onClick = {
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            val clip = ClipData.newPlainText("App Logs", DebugLogger.getAllLogsAsString())
-                            clipboard.setPrimaryClip(clip)
-                            Toast.makeText(context, "Copied!", Toast.LENGTH_SHORT).show()
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Copy Logs")
-                    }
-                }
-            }
-        }
     }
 }
